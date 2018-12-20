@@ -16,11 +16,6 @@ example1 =
           let p21has1 = Tail 2 (Head 1) in
           Cons 1 [2] [2,1] p21has1 s22
 
---data BoundedList: (b : Nat) -> (l : List Nat) -> Type where
---  Single: (a: Nat) -> BoundedList a [a]
---  AppendEq: (bounded: BoundedList b l) -> BoundedList b (b :: l)
---  AppendLess: (bounded: BoundedList b l) -> (a: Fin b) -> BoundedList a ((finToNat a) :: l)
-
 data Sorted: (l: List Nat) -> Type where
   Empty: Sorted Nil
   Singletone: (a: Nat) -> Sorted [a]
@@ -33,15 +28,16 @@ example2 = PrependLess{b = 2} 1 [2,3] (PrependEq 2 [3] (PrependLess{b=3} 2 [] (S
 data SortResult: (source: List Nat) -> (res : List Nat) -> Type where
   MkRes: (Same source0 res0) -> (Sorted res0)  -> SortResult source0 res0
 
-data SortResultEx : (l : List Nat) -> Type where
-  MkSortResultEx : (SortResult l r) -> SortResultEx l
+SortResultEx : (l : List Nat) -> Type
+SortResultEx l = Exists (\r => SortResult l r)
 
+extract : (SortResultEx l) -> (List Nat)
+extract (Evidence a b) = a
 
-insertInto: (h : Nat) -> (tail : List Nat) -> (sTail : List Nat) -> (SortResult tail sTail) -> SortResultEx (h :: tail)
+insertInto: (h : Nat) -> (tail : List Nat) -> SortResultEx tail  -> SortResultEx (h :: tail)
 insertInto = ?sdfsdf
 
 insertionSort: (l: List Nat) ->  SortResultEx l
-insertionSort Nil = let res = MkRes Nils Empty in MkSortResultEx res
-insertionSort (x :: xs) = let sortedTail = insertionSort xs in
-                          case sortedTail of
-                            MkSortResultEx aa => ?sdfsdffg
+insertionSort Nil = Evidence Nil (MkRes Nils Empty)
+insertionSort (x :: xs) = let tailSortEx = insertionSort xs in
+                          insertInto x xs tailSortEx
