@@ -14,6 +14,9 @@ reflSame [] = Nils
 reflSame (x :: xs) = let recur = the (Same xs xs) (reflSame xs) in
     ConsSame x xs (x :: xs)  (Head x xs) recur
 
+appendSame: (h : Nat) -> (l1: List Nat) -> (l2: List Nat) -> (Same l1 l2) -> Same (h :: l1) (h :: l2)
+appendSame hd t1 t2 prf = ?sdsdsdsdsdsdsds
+
 example1 : Same [1,2] [2,1]
 example1 =
           let s22 = ConsSame 2 Nil [2] (Head 2 Nil) Nils in
@@ -25,8 +28,12 @@ data Sorted: (l: List Nat) -> Type where
   Singletone: (a: Nat) -> Sorted [a]
   Prepend: (a : Nat) -> (tail : List Nat) -> (LTE a b) -> (s: Sorted (b :: tail)) -> Sorted (a :: b:: tail)
 
---example2: Sorted [1,2,2,3]
---example2 = Prepend{b = 2} 1 [2,3] (Prepend 2 [3] (Prepend{b=3} 2 [] (Singletone 3)))
+tailOfSortedIsSorted: (x : Nat) -> (xs : List Nat) -> (prf: (Sorted (x :: xs))) -> Sorted xs
+tailOfSortedIsSorted h tail pr = case pr of
+                                      Empty impossible
+                                      (Singletone y) => Empty
+                                      Prepend a tl lte prf => prf
+
 
 data SortResult: (source: List Nat) -> (res : List Nat) -> Type where
   MkRes: (Same source0 res0) -> (Sorted res0)  -> SortResult source0 res0
@@ -40,36 +47,42 @@ extract (Evidence a b) = a
 insertIntoNil: (h : Nat) -> (SortResultEx [h])
 insertIntoNil hd = Evidence [hd] (MkRes (reflSame [hd]) (Singletone hd))
 
-appendSmaller: (h : Nat) -> (second : Nat) -> LTE h second-> (xs: List Nat) -> SortResultEx (second :: xs) -> SortResultEx (h :: second :: xs)
-appendSmaller hd x lte tail prf = case prf of
-                               Evidence res (MkRes tailSame tailSorted) =>
-                                 let sorted0 = the (Sorted (hd :: x :: tail)) ?ssssss in
-                                 let same = the (Same (hd :: x :: tail ) (hd :: x :: tail) ) ?sdsdfsdfs33 in
-                                 Evidence (hd :: x :: tail ) (MkRes same sorted0)
+appendSmaller: (h : Nat) -> (second : Nat) -> LTE h second-> (xs: List Nat) -> (res : List Nat) -> (SortResult (second :: xs)  res) -> SortResultEx (h :: second :: xs)
+appendSmaller hd x lte tail res prf = case prf of
+                                         MkRes tailSame tailSorted =>
+                                            let resSorted = the (Sorted (hd :: res)) (?sdf4444) in
+                                            --let tailSorted1 = the (Sorted (hd :: res)) tailSorted
+                                            --let sorted = the (Sorted (hd :: res)) (Prepend{b=x} hd tail lte (tailOfSortedIsSorted x tail tailSorted)) in
+                                            let same = the (Same (hd :: x :: tail) (hd :: res)) (appendSame hd (x :: tail) res tailSame)  in
+                                            Evidence (hd :: res) (MkRes same resSorted)
 
-insertLarger: (h : Nat) -> (second : Nat) -> LTE second h-> (xs: List Nat) -> SortResultEx (second :: xs) -> SortResultEx (h :: second :: xs)
-insertLarger hd x lte prf = ?sdfsdf4444
+--insertLarger: (h : Nat) -> (second : Nat) -> LTE second h-> (xs: List Nat) -> (res : List Nat) -> (SortResult (second :: xs)  res) -> SortResultEx (h :: second :: xs)
+--insertLarger hd x lte prf = ?sdfsdf4444
+
+nilIsNorASortResultOfCons:  (h : Nat) -> (tail : List Nat) -> (SortResult (h :: tail) Nil) -> Void
+nilIsNorASortResultOfCons = ?sppdso88
 
 insertInto: (h : Nat) -> (tail : List Nat) -> SortResultEx tail  -> SortResultEx (h :: tail)
 insertInto x xs res0 = case res0 of
-                        Evidence res (MkRes tailSame tailSorted) => case xs of
+                        Evidence res prf => case xs of
                           [] =>  insertIntoNil x
-                          xsh :: xss => case (order{to = LTE} x xsh) of
-                             Left headIsSmaller => appendSmaller x xsh headIsSmaller xss res0
-                             Right headIsLarger => insertLarger x xsh headIsLarger xss res0
+                          xsh :: xss =>
+                              case (order{to = LTE} x xsh) of
+                                  Left headIsSmaller => appendSmaller x xsh headIsSmaller xss res prf
+                                  Right headIsLarger =>  let xssIsSorted = the (SortResult xss xss) ?sdfsdfsdf3 in
+                                        case insertInto x xss (Evidence xss xssIsSorted) of
+                                            Evidence tRes tProof =>
+                                              case tRes of
+                                                Nil => ?rrrImpossible
+                                                rHead :: rTail => let finalRes = xsh :: rHead :: rTail in
+                                                                  let fSame = the (Same (x :: xsh :: xss) finalRes ) ?iioioi in
+                                                                  let fSorted = the (Sorted finalRes ) ?isdf99 in
+                                                                  Evidence finalRes (MkRes fSame fSorted)
+
+
 
 
 
 insertionSort: (l: List Nat) ->  SortResultEx l
 insertionSort Nil = Evidence Nil (MkRes Nils Empty)
-insertionSort (x :: xs) = let tailSortEx = insertionSort xs in
-                          insertInto x xs tailSortEx
-
-
-
---myTest: Nat -> Nat -> String
---myTest x y = case (order{to = LTE} x y) of
-              --(Left t) => "less"
-            --  (Right w1) => "moer"
-
---idris -p contrib
+insertionSort (x :: xs) = insertInto x xs (insertionSort xs)
