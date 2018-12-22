@@ -52,16 +52,25 @@ nilIsNorASortResultOfCons hd tl (MkRes same _) = case same of
                                                           Nils impossible
                                                           ConsSame _ _ _ _ _ impossible
 
+headDecreasesAfterSorting: (h : Nat) -> (t : List Nat) -> (newH : Nat) -> (newT : List Nat) -> (SortResult (h :: t) (newH :: newT)) -> LTE h newH
+headDecreasesAfterSorting x xs nx nxs (MkRes same sorted) = case sorted of
+                                                               Empty impossible
+                                                               (Singletone n) => ?sadflkjsd
+                                                               Prepend nx1 tl1 lte prf => ?sdf9888778879
+
 appendSmaller: (h : Nat) -> (second : Nat) -> LTE h second-> (xs: List Nat) -> (res : List Nat) -> (SortResult (second :: xs)  res) -> SortResultEx (h :: second :: xs)
 appendSmaller hd x lte tail res prf = case prf of MkRes tailSame tailSorted =>
                                                      case res of
                                                         Nil => absurd (nilIsNorASortResultOfCons x tail prf)
                                                         resH :: resT =>
-                                                          let resSorted = the (Sorted (hd :: resH :: resT)) (?sdf4444) in
+                                                          let hdSmallerRH = LTEIsTransitive hd x resH lte (headDecreasesAfterSorting x tail resH resT prf) in
+                                                          let resSorted = the (Sorted (hd :: resH :: resT)) (Prepend{b=resH} hd resT hdSmallerRH tailSorted)  in
                                                           let same = the (Same (hd :: x :: tail) (hd :: resH :: resT)) (appendSame hd (x :: tail) (resH :: resT) tailSame)  in
                                                           Evidence (hd :: resH :: resT) (MkRes same resSorted)
 
-
+tailOfSortResIsSorted: (h: Nat) -> (tl: List Nat) -> SortResult (h::tl) (h::tl) -> SortResult tl tl
+tailOfSortResIsSorted x xs (MkRes same sorted) = let tailSorted = tailOfSortedIsSorted x xs sorted in
+                                                 ?sdf999888
 
 insertInto: (h : Nat) -> (tail : List Nat) -> SortResultEx tail  -> SortResultEx (h :: tail)
 insertInto x xs res0 = case res0 of
@@ -70,8 +79,13 @@ insertInto x xs res0 = case res0 of
                           xsh :: xss =>
                               case (order{to = LTE} x xsh) of
                                   Left headIsSmaller => appendSmaller x xsh headIsSmaller xss res prf
-                                  Right headIsLarger =>  let xssIsSorted = the (SortResult xss xss) ?sdfsdfsdf3 in
-                                        case insertInto x xss (Evidence xss xssIsSorted) of
+                                  Right headIsLarger =>
+                                        --let eq0 = the (xsh :: xss = xs) ?iiiuuiis in
+                                      --  let xsIsSorted1 = the (SortResult xs xs) ( (tailOfSortResIsSorted x xs prf)) in
+                                      --  let xsIsSorted = the (SortResult (xsh :: xss) (xsh :: xss)) ?jjjjjj in
+                                        --let xssIsSorted = tailOfSortResIsSorted xsh xss xsIsSorted in
+                                        let xssIsSorted = the (SortResult xss xss) ?jjjjjjii in
+                                        case insertInto x xss (Evidence xss  xssIsSorted) of
                                             Evidence tRes tProof =>
                                               case tRes of
                                                 Nil => absurd (nilIsNorASortResultOfCons x xss tProof)
