@@ -5,16 +5,41 @@ import Data.List
 data Same: (one : List Nat) -> (other : List Nat) -> Type where
   Nils : Same [] []
   Append: (h: Nat) -> (l1 : List Nat) -> (l2 : List Nat) -> (Same l1 l2) -> Same (h :: l1) (h :: l2)
-  Swap: (this:List Nat) -> (that : List Nat) ->
-         (beg : List Nat) -> (x1 : Nat) -> (mid : List Nat) -> (x2 : Nat) -> (end : List Nat) ->
-           (this = (beg ++ (x1 :: (mid ++ (x2 :: end))))) -> (that = (beg ++ (x2 :: (mid ++ (x1 :: end)))))  -> Same this that
+  Swap: (beg : List Nat) -> (x1 : Nat) -> (mid : List Nat) -> (x2 : Nat) -> (end : List Nat)
+   -> Same (beg ++ (x1 :: (mid ++ (x2 :: end)))) (beg ++ (x2 :: (mid ++ (x1 :: end))))
   Trans: Same l1 l2 -> Same l2 l3 -> Same l1 l3
+
+lengthLemma: (l1 : List Nat) -> (l2 : List Nat) -> ((length l1) = (length l2)) -> ((length (ap ++ l1)) = (length (ap ++ l2)))
+lengthLemma{ap} lst1 lst2 eq = let eq1 = the ((length (ap ++ lst1)) = ((length ap) + (length lst1))) (lengthAppend ap lst1) in
+                               let eq2 = the ((length (ap ++ lst2)) = ((length ap) + (length lst2))) (lengthAppend ap lst2) in
+                               let eq0 = the ( ((length ap) + (length lst1)) = ((length ap) + (length lst2))) (plusConstantLeft (length lst1) (length lst2) (length ap) eq) in
+                               let eq3 = the ((length (ap ++ lst2)) = ((length ap) + (length lst1))) (rewrite eq0 in eq2) in
+                               rewrite eq3 in eq1
+
+lengthPreserved : (list1 : List Nat) -> (list2 : List Nat) -> (Same list1 list2) -> ((length list1) = (length list2))
+lengthPreserved l1 l2 prf = case prf of
+                              Nils => Refl
+                              Append h t1 t2 tPrf => let tailsEq = the ((length t1) = (length t2)) (lengthPreserved t1 t2 tPrf) in
+                                rewrite tailsEq in Refl
+                              Swap beg x1 mid x2 end =>
+                                 let step1 = the ( (length ((x1 :: end))) = (length ((x2 :: end))) ) Refl in
+                                 let step2 = the ( (length (mid ++ (x1 :: end))) = (length (mid ++ (x2 :: end))) ) (lengthLemma (x1 :: end) (x2 :: end) step1) in
+                                 let step3 = the ( (length (x2 :: (mid ++ (x1 :: end)))) = (length (x1 :: (mid ++ (x2 :: end)))) ) (rewrite step2 in Refl) in
+                                 let step4 = the (length (beg ++ x2 :: mid ++ x1 :: end) = length (beg ++ x1 :: mid ++ x2 :: end)) $ lengthLemma{ap = beg} (x2 :: (mid ++ (x1 :: end))) (x1 :: (mid ++ (x2 :: end))) step3 in
+                                 rewrite step4 in Refl
+                              Trans{l2 = r} s1 s2 => let eq1 = the ((length l1) = (length r)) (lengthPreserved l1 r s1) in
+                                                     let eq2 = the ((length r) = (length l2)) (lengthPreserved r l2 s2) in
+                                                     rewrite eq1 in eq2
+
+
+nilIsNotSameToCons: (h : Nat) -> (t : List Nat) -> (Same (h::t) Nil) -> Void
+nilIsNotSameToCons hd tl prf = let x = lengthPreserved (hd :: tl) Nil prf in absurd x
 
 symSame: Same lst1 lst2 -> Same lst2 lst1
 symSame prf = case prf of
                 Nils => Nils
                 Append h l1 l2 prf1  => Append h l2 l1 (symSame prf1)
-                Swap this that beg x1 mid x2 end eq1 eq2 => Swap that this beg x2 mid x1 end eq2 eq1
+                Swap beg x1 mid x2 end => Swap beg x2 mid x1 end
                 Trans s1 s2 => Trans (symSame s2) (symSame s1)
 
 
@@ -22,8 +47,8 @@ reflSame: (l: List Nat) -> Same l l
 reflSame [] = Nils
 reflSame (x :: xs) = Append x xs xs (reflSame xs)
 
-transSame: Same lst1 lst2 -> Same lst2 lst3 -> Same lst1 lst3
-transSame pr12 pr23 = ?transSame1
+--transSame: Same lst1 lst2 -> Same lst2 lst3 -> Same lst1 lst3
+--transSame pr12 pr23 = Trans pr12 pr23
 
 --tailOfSameIsSame : (h1 : Nat) -> (t1: List Nat) -> (h2 : Nat) -> (t2 : List Nat) -> Same (h1 :: t1) (h2 :: t2) -> Same t1 t2
 --tailOfSameIsSame = ?sdfds0000
@@ -49,28 +74,8 @@ SortResultEx l = Exists (\r => SortResult l r)
 extract : (SortResultEx l) -> (List Nat)
 extract (Evidence a b) = a
 
---
 insertIntoNil: (h : Nat) -> (SortResultEx [h])
 insertIntoNil hd = Evidence [hd] (MkRes (reflSame [hd]) (Singletone hd))
-
---insertIntoNil2: (h : Nat) -> (src : List Nat) -> SortResult src [] -> SortResultEx (h::src)
---insertIntoNil2 hd source (MkRes same sorted) = case same of
---                                                  Nils => Evidence [hd] (MkRes (reflSame [hd]) (Singletone hd))
---                                                  ConsSame _ _ _ _ _ impossible
-
---appendToConsIsNotNil : (l1 : List Nat) -> (x: Nat) -> (l2 : List Nat) -> ((l1 ++ (x :: l2)) = Nil) -> Void
---appendToConsIsNotNil [] e lst2 eq0 =
---   let pp = the (([] ++ (e :: lst2)) = []) eq0 in
---appendToConsIsNotNil (lhead :: ltail) e lst2 eq = ?sdf090
-
-nilIsNotSameToCons: (h : Nat) -> (t : List Nat) -> (Same (h::t) Nil) -> Void
-nilIsNotSameToCons = ?nilIsNotSameToCons1
---case same of
-  --                                                        Nils impossible
-    --                                                      Append _ _ _ _ impossible
-      --                                                    Swap (hd :: tl) [] beg x1 mid x2 end eq1 eq2 =>
-        --                                                    let xx = the (Nil = (beg ++ (x2 :: (mid ++ (x1 :: end))))) eq2 in ?sdfsdf2123
-          --                                                Trans s1 s2 => ?sadfsda
 
 nilIsNorASortResultOfCons:  (h : Nat) -> (tail : List Nat) -> (SortResult (h :: tail) Nil) -> Void
 nilIsNorASortResultOfCons hd tl (MkRes same _) = nilIsNotSameToCons hd tl same
@@ -96,7 +101,7 @@ tailOfSortResIsSorted x xs (MkRes same sorted) =
 
 
 sortReordered : (source1 : List Nat) -> (source2 : List Nat) -> (result : List Nat) -> Same source1 source2 -> SortResult source1 result -> SortResult source2 result
-sortReordered s1 s2 res same12 (MkRes same1r sorted)= let same2r = transSame (symSame same12) same1r in MkRes same2r sorted
+sortReordered s1 s2 res same12 (MkRes same1r sorted)= let same2r = Trans (symSame same12) same1r in MkRes same2r sorted
 
 sortIsIdempotent : (source : List Nat) -> (result : List Nat) -> SortResult source result -> SortResult result result
 sortIsIdempotent src res r@(MkRes same sorted) = sortReordered src res res same r
