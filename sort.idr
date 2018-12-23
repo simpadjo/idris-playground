@@ -65,6 +65,9 @@ data SortResult: (source: List Nat) -> (res : List Nat) -> Type where
 SortResultEx : (l : List Nat) -> Type
 SortResultEx l = Exists (\r => SortResult l r)
 
+SortResultEx2 : (h : Nat) -> (l : List Nat) -> Type
+SortResultEx2 h l = Exists (\t => SortResult l (h :: t))
+
 extract : (SortResultEx l) -> (List Nat)
 extract (Evidence a b) = a
 
@@ -74,16 +77,10 @@ insertIntoNil hd = Evidence [hd] (MkRes (reflSame [hd]) (Singletone hd))
 nilIsNorASortResultOfCons:  (h : Nat) -> (tail : List Nat) -> (SortResult (h :: tail) Nil) -> Void
 nilIsNorASortResultOfCons hd tl (MkRes same _) = nilIsNotSameToCons hd tl same
 
+
 twoIsNot1 : (S (S Z) = S Z) -> Void
 twoIsNot1 bs = ?twoIsNot11
 
---headTheSameAfterInsertingBig: (h : Nat) -> (t : List Nat) -> (SortResult (h :: t) (h :: t)) -> (next : Nat) -> LTE h next -> (newH : Nat) -> (newT : List Nat) -> (SortResult (next :: h :: t) (newH :: newT)) -> (newH = h)
---headTheSameAfterInsertingBig hd Nil sorted1 nex lte newh newt (MkRes same2 sorted2) = case sorted2 of
---                                                                                           Empty impossible
---                                                                                           Singletone newH => let bs = (lengthPreserved [nex, hd] [newH] same2) in absurd (twoIsNot1 bs)
---                                                                                           Prepend{b} newT Nil _ _ => case same of
-
---headTheSameAfterInsertingBig hd (x :: xs) sorted1  nex lte newh newt  sorted2 = ?asdf000123
 
 appendSmaller: (next : Nat) -> (resHead : Nat) -> LTE next resHead-> (resTail: List Nat) -> SortResult (resHead :: resTail)  (resHead :: resTail) -> SortResultEx (next :: resHead :: resTail)
 appendSmaller n resH lte resT prf = case prf of
@@ -113,6 +110,8 @@ sortIsIdempotent src res r@(MkRes same sorted) = sortReordered src res res same 
 sortReorderedEx : (source1 : List Nat) -> (source2 : List Nat) -> Same source1 source2 -> SortResultEx source1 -> SortResultEx source2
 sortReorderedEx s1 s2 same (Evidence r prf) = Evidence r (sortReordered s1 s2 r same prf)
 
+
+
 insertIntoSingletone: (x : Nat) -> (y : Nat) -> SortResultEx [x,y]
 insertIntoSingletone a b = case (order{to = LTE} a b) of
                               Left aIsSmaller =>  let sorted = Prepend a [] aIsSmaller (Singletone b) in
@@ -121,6 +120,34 @@ insertIntoSingletone a b = case (order{to = LTE} a b) of
                               Right bIsSmaller => let sorted = Prepend b [] bIsSmaller (Singletone a) in
                                                   let same = Swap [] a [] b [] in
                                                   Evidence [b,a] (MkRes same sorted)
+
+                                                  --SortResultEx2 : (h : Nat) -> (l : List Nat) -> Type
+                                                  --SortResultEx2 h l = Exists (\t => SortResult l (h :: t))
+mutual
+  insertSmall : (e : Nat) -> (h : Nat) -> (t : List Nat) -> (LTE x h) -> (Sorted (h :: t)) -> SortResultEx2 e (e :: h :: t)
+  insertSmall v x xs lte srt = ?asdfsadf
+
+  insertBig : (e : Nat) -> (h : Nat) -> (t : List Nat) -> (LTE h e) -> (Sorted (h :: t)) -> SortResultEx2 h (e :: h :: t)
+  insertBig v x1 Nil lte srt = ?asdfsdfss
+  insertBig v x1 (x2 :: xs) lte srt = case (order{to = LTE} v x2) of
+                                        Left vIsSmall => let (Evidence resT (MkRes same sorted)) = insertSmall v x2 xs vIsSmall (tailOfSortedIsSorted srt) in
+                                                         let sorted1 = the (Sorted (x1 :: v :: resT) ) (Prepend{b=v} x1 resT lte sorted) in
+                                                         let same1 = the (Same (v :: x2 :: xs) (v :: resT) ) same in
+                                                         let same2 = the (Same (x1 :: v :: x2 :: xs) (x1 :: v :: resT) ) (Append x1 (v :: x2 :: xs) (v :: resT) same1) in
+                                                         let same3 = the (Same (v :: x1 :: x2 :: xs) (x1 :: v :: x2 :: xs)) (Swap [] v [] x1 (x2 :: xs)) in
+                                                         let same4 = the (Same (v :: x1 :: x2 :: xs) (x1 :: v :: resT)) (Trans same3 same2) in
+                                                         let final = the (SortResult (v :: x1 :: x2 :: xs) (x1 :: v :: resT)) (MkRes same4 sorted1) in
+                                                         Evidence (v :: resT) final
+                                        Right vIsBig =>  let (Evidence resT (MkRes same sorted)) = insertBig v x2 xs vIsBig (tailOfSortedIsSorted srt) in
+                                                         let x1LTx2 = firstSmallerThanSecondInSorted x1 x2 xs srt in
+                                                         let sorted1 = the (Sorted (x1 :: x2 :: resT) ) (Prepend{b=x2} x1 resT x1LTx2 sorted) in
+                                                         let same1 = the (Same (v :: x2 :: xs) (x2 :: resT) ) same in
+                                                         let same2 = the (Same (x1 :: v :: x2 :: xs) (x1 :: x2 :: resT) ) (Append x1 (v :: x2 :: xs) (x2 :: resT) same1) in
+                                                         let same3 = the (Same (v :: x1 :: x2 :: xs) (x1 :: v ::  x2 :: xs)) (Swap [] v [] x1 (x2 :: xs)) in
+                                                         let same4 = the (Same (v :: x1 :: x2 :: xs) (x1 :: x2 :: resT))  (Trans same3 same2) in
+                                                         let final = the (SortResult (v :: x1 :: x2 :: xs) (x1 :: x2 :: resT)) (MkRes same4 sorted1) in
+                                                         Evidence (x2 :: resT) final
+
 
 insertInto: (h : Nat) -> (lst : List Nat) -> SortResult lst lst -> SortResultEx (h :: lst)
 insertInto x res prf@(MkRes _ resSorted) =
