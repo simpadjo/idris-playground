@@ -74,8 +74,16 @@ insertIntoNil hd = Evidence [hd] (MkRes (reflSame [hd]) (Singletone hd))
 nilIsNorASortResultOfCons:  (h : Nat) -> (tail : List Nat) -> (SortResult (h :: tail) Nil) -> Void
 nilIsNorASortResultOfCons hd tl (MkRes same _) = nilIsNotSameToCons hd tl same
 
-headTheSameAfterInsertingBig: (h : Nat) -> (t : List Nat) -> (SortResult (h :: t) (h :: t)) -> (new : Nat) -> LTE h new -> (SortResult (new :: h :: t) (newH :: rest)) -> (newH = h)
-headTheSameAfterInsertingBig = ?asdfsadf88898989
+twoIsNot1 : (S (S Z) = S Z) -> Void
+twoIsNot1 bs = ?twoIsNot11
+
+--headTheSameAfterInsertingBig: (h : Nat) -> (t : List Nat) -> (SortResult (h :: t) (h :: t)) -> (next : Nat) -> LTE h next -> (newH : Nat) -> (newT : List Nat) -> (SortResult (next :: h :: t) (newH :: newT)) -> (newH = h)
+--headTheSameAfterInsertingBig hd Nil sorted1 nex lte newh newt (MkRes same2 sorted2) = case sorted2 of
+--                                                                                           Empty impossible
+--                                                                                           Singletone newH => let bs = (lengthPreserved [nex, hd] [newH] same2) in absurd (twoIsNot1 bs)
+--                                                                                           Prepend{b} newT Nil _ _ => case same of
+
+--headTheSameAfterInsertingBig hd (x :: xs) sorted1  nex lte newh newt  sorted2 = ?asdf000123
 
 appendSmaller: (next : Nat) -> (resHead : Nat) -> LTE next resHead-> (resTail: List Nat) -> SortResult (resHead :: resTail)  (resHead :: resTail) -> SortResultEx (next :: resHead :: resTail)
 appendSmaller n resH lte resT prf = case prf of
@@ -128,10 +136,9 @@ insertInto x res prf@(MkRes _ resSorted) =
                                     case tRes of
                                       Nil => absurd (nilIsNorASortResultOfCons x (r2 :: rs) prf1)
                                       tResHead :: tRestail =>
-                                      --headTheSameAfterInsertingBig: (h : Nat) -> (t : List Nat) -> (SortResult (h :: t) (h :: t)) -> (new : Nat) -> LTE h new -> (SortResult (new :: h :: t) (newH :: rest)) -> (newH = h)
-                                         let r2NotChanged = the (tResHead = r2) ?asdfsdf9990 in --(headTheSameAfterInsertingBig r2 rs (tailOfSortResIsSorted s)) in
+                                        -- let r2NotChanged = the (tResHead = r2) (headTheSameAfterInsertingBig r2 rs (tailOfSortResIsSorted prf) x headIsLarger prf1) in
                                          let r1LTr2 = the (LTE r1 r2) (firstSmallerThanSecondInSorted r1 r2 rs resSorted) in
-                                         let r1IsSmall = the (LTE r1 tResHead) (rewrite r2NotChanged in r1LTr2) in
+                                         let r1IsSmall = the (LTE r1 tResHead) ?asdfasdf in --(rewrite r2NotChanged in r1LTr2) in
                                          let sorted = the (Sorted (r1 :: tResHead :: tRestail)) (Prepend r1 tRestail r1IsSmall tResSorted) in
                                          let same0 = the (Same (r1 :: x :: r2 :: rs) (r1 :: tResHead :: tRestail)) (Append r1 (x :: r2 :: rs) (tResHead :: tRestail) tResSame) in
                                          let same1 = the (Same (x :: r1 :: r2 :: rs) (r1 :: x :: r2 :: rs)) (Swap [] x [] r1 (r2 :: rs)) in
