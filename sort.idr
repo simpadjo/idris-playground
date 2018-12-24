@@ -2,13 +2,15 @@ module SameElements
 import Decidable.Order
 import Data.List
 
+--Property: two list have the same set of elements
 data Same: (one : List Nat) -> (other : List Nat) -> Type where
   Nils : Same [] []
-  Append: (h: Nat) -> (l1 : List Nat) -> (l2 : List Nat) -> (Same l1 l2) -> Same (h :: l1) (h :: l2)
+  Append: (h: Nat) -> (l1 : List Nat) -> (l2 : List Nat) -> Same l1 l2 -> Same (h :: l1) (h :: l2)
   Swap: (beg : List Nat) -> (x1 : Nat) -> (mid : List Nat) -> (x2 : Nat) -> (end : List Nat)
    -> Same (beg ++ (x1 :: (mid ++ (x2 :: end)))) (beg ++ (x2 :: (mid ++ (x1 :: end))))
   Trans: Same l1 l2 -> Same l2 l3 -> Same l1 l3
 
+--tedious proof that if length(l1) = length(l2) then length(ap ++ l1) = length(ap ++ l2)
 lengthLemma: (l1 : List Nat) -> (l2 : List Nat) -> ((length l1) = (length l2)) -> ((length (ap ++ l1)) = (length (ap ++ l2)))
 lengthLemma{ap} lst1 lst2 eq = let eq1 = the ((length (ap ++ lst1)) = ((length ap) + (length lst1))) (lengthAppend ap lst1) in
                                let eq2 = the ((length (ap ++ lst2)) = ((length ap) + (length lst2))) (lengthAppend ap lst2) in
@@ -16,11 +18,12 @@ lengthLemma{ap} lst1 lst2 eq = let eq1 = the ((length (ap ++ lst1)) = ((length a
                                let eq3 = the ((length (ap ++ lst2)) = ((length ap) + (length lst1))) (rewrite eq0 in eq2) in
                                rewrite eq3 in eq1
 
+--if lists have the same elements they have the same length
 lengthPreserved : (list1 : List Nat) -> (list2 : List Nat) -> (Same list1 list2) -> ((length list1) = (length list2))
 lengthPreserved l1 l2 prf = case prf of
                               Nils => Refl
                               Append h t1 t2 tPrf => let tailsEq = the ((length t1) = (length t2)) (lengthPreserved t1 t2 tPrf) in
-                                rewrite tailsEq in Refl
+                                                     rewrite tailsEq in Refl
                               Swap beg x1 mid x2 end =>
                                  let step1 = the ( (length ((x1 :: end))) = (length ((x2 :: end))) ) Refl in
                                  let step2 = the ( (length (mid ++ (x1 :: end))) = (length (mid ++ (x2 :: end))) ) (lengthLemma (x1 :: end) (x2 :: end) step1) in
@@ -32,9 +35,10 @@ lengthPreserved l1 l2 prf = case prf of
                                                      rewrite eq1 in eq2
 
 
-nilIsNotSameToCons: (h : Nat) -> (t : List Nat) -> (Same (h::t) Nil) -> Void
-nilIsNotSameToCons hd tl prf = let x = lengthPreserved (hd :: tl) Nil prf in absurd x
+nilIsNotSameToCons: Same (h::t) Nil -> Void
+nilIsNotSameToCons{h}{t} prf = let x = lengthPreserved (h :: t) Nil prf in absurd x
 
+--Same is symmetric
 symSame: Same lst1 lst2 -> Same lst2 lst1
 symSame prf = case prf of
                 Nils => Nils
@@ -43,10 +47,12 @@ symSame prf = case prf of
                 Trans s1 s2 => Trans (symSame s2) (symSame s1)
 
 
+--Same is reflexive
 reflSame: (l: List Nat) -> Same l l
 reflSame [] = Nils
 reflSame (x :: xs) = Append x xs xs (reflSame xs)
 
+--Property: the list is sorted
 data Sorted: (l: List Nat) -> Type where
   Empty: Sorted Nil
   Singletone: (a: Nat) -> Sorted [a]
@@ -58,29 +64,24 @@ tailOfSortedIsSorted{x}{xs} pr = case pr of
                                       (Singletone y) => Empty
                                       Prepend x xs _ prf => prf
 
-
+--Property: source becomes res after sorting
 data SortResult: (source: List Nat) -> (res : List Nat) -> Type where
-  MkRes: (Same source0 res0) -> (Sorted res0)  -> SortResult source0 res0
+  MkRes: (Same source res) -> (Sorted res)  -> SortResult source res
 
+--Holds the sort result of l
 SortResultEx : (l : List Nat) -> Type
 SortResultEx l = Exists (\r => SortResult l r)
 
-SortResultEx2 : (h : Nat) -> (l : List Nat) -> Type
-SortResultEx2 h l = Exists (\t => SortResult l (h :: t))
+--Holds the sort result of l and gives the hint about the first element of the result
+SortResultHinted : (h : Nat) -> (l : List Nat) -> Type
+SortResultHinted h l = Exists (\t => SortResult l (h :: t))
 
+--extract result from the existential
 extract : (SortResultEx l) -> (List Nat)
 extract (Evidence a b) = a
 
 nilIsNorASortResultOfCons:  (h : Nat) -> (tail : List Nat) -> (SortResult (h :: tail) Nil) -> Void
-nilIsNorASortResultOfCons hd tl (MkRes same _) = nilIsNotSameToCons hd tl same
-
-
-appendSmaller: (next : Nat) -> (resHead : Nat) -> LTE next resHead-> (resTail: List Nat) -> SortResult (resHead :: resTail)  (resHead :: resTail) -> SortResultEx (next :: resHead :: resTail)
-appendSmaller n resH lte resT prf = case prf of
-                                             MkRes tailSame tailSorted =>
-                                                          let resSorted = the (Sorted (n :: resH :: resT)) (Prepend{b=resH} n resT lte tailSorted)  in
-                                                          let same = the (Same (n ::resH :: resT) (n :: resH :: resT)) (Append n (resH :: resT) (resH :: resT) tailSame)  in
-                                                          Evidence (n :: resH :: resT) (MkRes same resSorted)
+nilIsNorASortResultOfCons hd tl (MkRes same _) = nilIsNotSameToCons{h = hd}{t = tl} same
 
 tailOfSortResIsSorted: SortResult (h::tl) (h::tl) -> SortResult tl tl
 tailOfSortResIsSorted{h}{tl} (MkRes same sorted) =
@@ -103,24 +104,13 @@ sortIsIdempotent src res r@(MkRes same sorted) = sortReordered src res res same 
 sortReorderedEx : (source1 : List Nat) -> (source2 : List Nat) -> Same source1 source2 -> SortResultEx source1 -> SortResultEx source2
 sortReorderedEx s1 s2 same (Evidence r prf) = Evidence r (sortReordered s1 s2 r same prf)
 
-
-
-insertIntoSingletone: (x : Nat) -> (y : Nat) -> SortResultEx [x,y]
-insertIntoSingletone a b = case (order{to = LTE} a b) of
-                              Left aIsSmaller =>  let sorted = Prepend a [] aIsSmaller (Singletone b) in
-                                                  let same = reflSame [a, b] in
-                                                  Evidence [a,b] (MkRes same sorted)
-                              Right bIsSmaller => let sorted = Prepend b [] bIsSmaller (Singletone a) in
-                                                  let same = Swap [] a [] b [] in
-                                                  Evidence [b,a] (MkRes same sorted)
-
 mutual
-  insertSmall : (e : Nat) -> (h : Nat) -> (t : List Nat) -> (LTE e h) -> (Sorted (h :: t)) -> SortResultEx2 e (e :: h :: t)
+  insertSmall : (e : Nat) -> (h : Nat) -> (t : List Nat) -> (LTE e h) -> (Sorted (h :: t)) -> SortResultHinted e (e :: h :: t)
   insertSmall v x xs lte srt = let same = reflSame (v :: x :: xs) in
                                let sorted = the (Sorted (v::x::xs)) (Prepend{b=x} v xs lte srt) in
                                Evidence (x :: xs) (MkRes same sorted)
 
-  insertBig : (e : Nat) -> (h : Nat) -> (t : List Nat) -> (LTE h e) -> (Sorted (h :: t)) -> SortResultEx2 h (e :: h :: t)
+  insertBig : (e : Nat) -> (h : Nat) -> (t : List Nat) -> (LTE h e) -> (Sorted (h :: t)) -> SortResultHinted h (e :: h :: t)
   insertBig v x1 Nil lte srt = let sorted = the (Sorted [x1, v]) (Prepend{b=v} x1 Nil lte (Singletone v)) in
                                let same = the (Same [v, x1] [x1, v]) (Swap [] v [] x1 []) in
                                Evidence [v] (MkRes same sorted)
@@ -149,7 +139,7 @@ insertionSort (x :: xs) =  let (Evidence res (MkRes same sorted)) = insertionSor
                            case res of
                              Nil => case xs of
                                       Nil => Evidence [x] (MkRes (reflSame [x]) (Singletone x))
-                                      xs1 :: xss => absurd (nilIsNotSameToCons xs1 xss same)
+                                      xs1 :: xss => absurd (nilIsNotSameToCons same)
                              r :: rs =>
                                 let eq = the (res = (r::rs)) ?eqqqqqq in
                                 let sameHint = the (Same res (r::rs) ) (rewrite eq in (reflSame (r::rs))) in
@@ -173,3 +163,6 @@ insertionSort (x :: xs) =  let (Evidence res (MkRes same sorted)) = insertionSor
                                                         let same3 = the (Same (x :: xs) (x :: res) ) (Append x xs res same00) in
                                                         let same5 = the (Same (x :: xs) (r :: tRes) ) (Trans same3 same2) in
                                                         Evidence (r :: tRes) (MkRes same5 sorted1)
+
+test : List Nat
+test = extract $ insertionSort [2,3,4,1,2,6,1]
