@@ -133,36 +133,35 @@ mutual
                                                          let final = the (SortResult (v :: x1 :: x2 :: xs) (x1 :: x2 :: resT)) (MkRes same4 sorted1) in
                                                          Evidence (x2 :: resT) final
 
-insertionSort: (l: List Nat) ->  SortResultEx l
-insertionSort [] = Evidence [] (MkRes Nils Empty)
-insertionSort (x :: xs) =  let (Evidence res (MkRes same sorted)) = insertionSort xs in
+mutual
+  insertIntoCons: (h : Nat) -> (tl: List Nat) -> (resH : Nat) -> (resT : List Nat) -> SortResult tl (resH :: resT) -> SortResultEx (h :: tl)
+  insertIntoCons x xs r rs (MkRes same sorted) =
+    case (order{to = LTE} x r) of
+       Left xSmall => let (Evidence tRes prf) = insertSmall x r rs xSmall sorted in
+                      case prf of
+                        MkRes same1 sorted1 =>
+                          let same11 = the (Same (x :: r :: rs) (x :: tRes)) same1 in
+                          let same0 = the (Same xs (r :: rs) ) same in
+                          let same00 = the (Same (x :: xs) (x :: r :: rs) ) (Append x xs (r :: rs) same0) in
+                          let same5 = the (Same (x :: xs) (x :: tRes) ) (Trans same00 same1) in
+                          Evidence (x :: tRes) (MkRes same5 sorted1)
+       Right x1Big => let (Evidence tRes prf) = insertBig x r rs x1Big sorted in
+                      case prf of
+                        MkRes same1 sorted1 =>
+                          let same2 = the (Same (x :: r :: rs) (r :: tRes)) same1 in
+                          let same0 = the (Same xs (r :: rs) ) same in
+                          let same3 = the (Same (x :: xs) (x :: r :: rs) ) (Append x xs (r :: rs) same0) in
+                          let same4 = the (Same (x :: xs) (r :: tRes) )  (Trans same3 same2) in
+                          Evidence (r :: tRes) (MkRes same4 sorted1)
+
+  insertionSort: (l: List Nat) ->  SortResultEx l
+  insertionSort [] = Evidence [] (MkRes Nils Empty)
+  insertionSort (x :: xs) =  let (Evidence res prf@(MkRes same sorted)) = insertionSort xs in
                            case res of
                              Nil => case xs of
                                       Nil => Evidence [x] (MkRes (reflSame [x]) (Singletone x))
                                       xs1 :: xss => absurd (nilIsNotSameToCons same)
-                             r :: rs =>
-                                let eq = the (res = (r::rs)) ?eqqqqqq in
-                                let sameHint = the (Same res (r::rs) ) (rewrite eq in (reflSame (r::rs))) in
-                                case (order{to = LTE} x r) of
-                                     Left xSmall => let (Evidence tRes prf) = insertSmall x r rs xSmall sorted in
-                                                    case prf of
-                                                      MkRes same1 sorted1 =>
-                                                        let same11 = the (Same (x :: r :: rs) (x :: tRes)) same1 in
-                                                        let same0 = the (Same xs (r :: rs) ) same in
-                                                        let same00 = the (Same (x :: xs) (x :: r :: rs) ) (Append x xs (r :: rs) same0) in
-                                                        let same5 = the (Same (x :: xs) (x :: tRes) ) (Trans same00 same1) in
-                                                        Evidence (x :: tRes) (MkRes same5 sorted1)
-                                     Right x1Big => let (Evidence tRes prf) = insertBig x r rs x1Big sorted in
-                                                    case prf of
-                                                      MkRes same1 sorted1 =>
-                                                        let same11 = the (Same (x :: r :: rs) (r :: tRes)) same1 in
-                                                        let same0 = the (Same xs (r :: rs) ) same in
-                                                        let same00 = the (Same xs res ) (rewrite eq in same0) in
-                                                        let same000 = the (Same (x :: res) (x :: r :: rs) ) (Append x res (r :: rs) sameHint) in
-                                                        let same2 = the (Same (x :: res) (r :: tRes) ) (Trans same000 same11) in
-                                                        let same3 = the (Same (x :: xs) (x :: res) ) (Append x xs res same00) in
-                                                        let same5 = the (Same (x :: xs) (r :: tRes) ) (Trans same3 same2) in
-                                                        Evidence (r :: tRes) (MkRes same5 sorted1)
+                             r :: rs => insertIntoCons x xs r rs prf
 
 test : List Nat
 test = extract $ insertionSort [2,3,4,1,2,6,1]
